@@ -1,0 +1,10 @@
+{
+  "description": "Discover and book diverse tour packages to exciting destinations with a user-friendly platform designed for travelers seeking unforgettable experiences.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
