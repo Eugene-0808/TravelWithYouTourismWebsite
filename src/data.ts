@@ -108,6 +108,14 @@ export const TRIP_TYPES: TripType[] = [
   "Cruise",
 ]
 
+export interface DepartureFare {
+  date: string
+  price: number
+  tag?: string
+  note?: string
+  bogo?: boolean
+}
+
 export interface Pkg {
   id: string
   name: string
@@ -124,6 +132,7 @@ export interface Pkg {
   depPort: string
   destPort: string
   departures: string[]
+  fares?: DepartureFare[]
   image: string
   highlights: string[]
 }
@@ -457,6 +466,18 @@ export const PACKAGES: Pkg[] = [
       "2027-05-15",
       "2027-05-22",
       "2027-05-29",
+    ],
+    fares: [
+      { date: "2027-03-27", price: 1799 },
+      { date: "2027-04-03", price: 3199, tag: "Buy 1 free 1", note: "$3,199 per pair", bogo: true },
+      { date: "2027-04-10", price: 1799 },
+      { date: "2027-04-17", price: 1799 },
+      { date: "2027-04-24", price: 1799 },
+      { date: "2027-05-01", price: 1699 },
+      { date: "2027-05-08", price: 1799, note: "Free lychee picking, eat-in-the-orchard included" },
+      { date: "2027-05-15", price: 1999, note: "Free lychee picking, eat-in-the-orchard included" },
+      { date: "2027-05-22", price: 1999, note: "Free lychee picking, eat-in-the-orchard included" },
+      { date: "2027-05-29", price: 1999, note: "Free lychee picking, eat-in-the-orchard included" },
     ],
     image: "1563245372-f21724e3856d",
     highlights: [
@@ -934,12 +955,25 @@ export const getPkg = (id: string) => PACKAGES.find((p) => p.id === id)
 export const getCountry = (id: string) => COUNTRIES.find((c) => c.id === id)!
 export const getShip = (name?: string) => SHIPS.find((s) => s.name === name)
 export const dealFor = (pkgId: string) => DEALS.find((d) => d.pkgId === pkgId)
+export const fareFor = (p: Pkg, date: string) => p.fares?.find((f) => f.date === date)
 
-export function unitPrice(p: Pkg, pax = 1) {
+export function fareUnitPrice(p: Pkg, f: DepartureFare) {
+  return f.bogo ? f.price / 2 : f.price
+}
+
+export function unitPrice(p: Pkg, pax = 1, date?: string, cabin?: string) {
+  let base = p.priceFrom
+  if (cabin) {
+    const c = getShip(p.ship)?.cabins.find((x) => x.type === cabin)
+    if (c) base = c.from
+  } else if (date) {
+    const f = fareFor(p, date)
+    if (f) base = fareUnitPrice(p, f)
+  }
   const d = dealFor(p.id)
-  if (!d) return p.priceFrom
-  if (d.type === "Group discount" && pax < 6) return p.priceFrom
-  return p.priceFrom * (1 - d.pct / 100)
+  if (!d) return base
+  if (d.type === "Group discount" && pax < 6) return base
+  return base * (1 - d.pct / 100)
 }
 
 export interface CartItem {
@@ -948,6 +982,7 @@ export interface CartItem {
   date: string
   pax: number
   addons: string[]
+  cabin?: string
 }
 
 export function itemAvailable(it: CartItem) {
@@ -961,7 +996,7 @@ export function itemTotal(it: CartItem) {
     (s, a) => s + (ADDONS.find((x) => x.id === a)?.price ?? 0),
     0,
   )
-  return (unitPrice(p, it.pax) + add) * it.pax
+  return (unitPrice(p, it.pax, it.date, it.cabin) + add) * it.pax
 }
 
 export interface Booking {
